@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "openfront-helpers",
+  "version": "1.0",
+  "description": "Adds percentage calculation to Openfront game population counters",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://openfront.io/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_title": "openfront-helpers"
+  }
+}
