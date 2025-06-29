@@ -1,0 +1,13 @@
+{
+  "name": "openfront-helpers",
+  "version": "1.0.0",
+  "description": "Chrome extension that adds percentage calculation to game population counters",
+  "main": "dist/content.js",
+  "scripts": {
+    "build": "tsc && copy manifest.json dist\\"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  }
+}
