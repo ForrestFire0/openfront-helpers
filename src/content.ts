@@ -41,8 +41,6 @@ function parsePopulationValues(populationText: string): PopulationValues | null 
     const actualGrowthRate = 10 + (current ** 0.73) / 4 * (1 - current / maximum);
     const growthMultiplier = actualGrowthRate / maxGrowthRateForMaxPop;
 
-    console.log({current, maximum, percentage})
-
     return {current, maximum, percentage, growthMultiplier};
 }
 
@@ -70,13 +68,14 @@ function getMultiplier(multiplier: string): number {
  * Updates the population display with the calculated percentage
  */
 function updatePopulationDisplay(): void {
-    console.log('updating population display...')
+    // console.log('updating population display...')
     try {
         // Use the specific DOM path to get the population element
         const controlPanels = document.getElementsByTagName('control-panel');
         if (!controlPanels || controlPanels.length === 0) {
             // Control panel not found, schedule next update and skip this one
             setTimeout(updatePopulationDisplay, UPDATE_INTERVAL_MS);
+            updateRecording(false, 0);
             return;
         }
 
@@ -84,6 +83,7 @@ function updatePopulationDisplay(): void {
         if (!populationElement) {
             // Population element not found, schedule next update and skip this one
             setTimeout(updatePopulationDisplay, UPDATE_INTERVAL_MS);
+            updateRecording(false, 0);
             return;
         }
 
@@ -108,11 +108,15 @@ function updatePopulationDisplay(): void {
 
         const values = parsePopulationValues(baseText);
 
+
         if (!values) {
             console.log('NO GOOD VALUES, waiting 1 second and trying again...')
             setTimeout(updatePopulationDisplay, 1000);
+            updateRecording(false, 0);
             return; // Couldn't parse the values, skip this update
         }
+
+        updateRecording(true, values.current);
 
         // Find any existing span with parentheses
         let spanElement: HTMLElement | null = null;
@@ -142,14 +146,124 @@ function updatePopulationDisplay(): void {
         console.error('Error updating population display (exiting)', error);
         // Schedule next update even after an error
         setTimeout(updatePopulationDisplay, UPDATE_INTERVAL_MS);
+        updateRecording(false, 0);
     }
 }
 
 // Set up the first update to happen after a short delay
 setTimeout(updatePopulationDisplay, UPDATE_INTERVAL_MS);
 
-// Also run once immediately
-updatePopulationDisplay();
-
 // Log that the extension is running
 console.log('Openfront Population Percentage extension is active');
+
+const GAME_STATES = {
+    NOT_ACTIVE: 0,
+    RECORDING: 1,
+    DONE_RECORDING: 2,
+}
+
+let gameState = GAME_STATES.NOT_ACTIVE;
+let gameStart = Date.now();
+let recording: number[] = [];
+let lastRecorded = 0;
+let lastStorageSave = 0;
+let currentGameId: string | null = null;
+
+/**
+ * Extracts the game ID from the URL
+ * @returns The game ID or null if not found
+ */
+function getGameId(): string | null {
+    // Sample URL: https://openfront.io/#join=DgUjVkVW
+    const hashMatch = window.location.hash.match(/#join=([A-Za-z0-9]+)/);
+    if (hashMatch && hashMatch[1]) {
+        return hashMatch[1];
+    }
+
+    // Also check URL parameters as a fallback
+    const urlParam = new URLSearchParams(window.location.search).get('join');
+    if (urlParam) {
+        return urlParam;
+    }
+
+    return null;
+}
+
+/**
+ * Saves the current recording to chrome.storage.local
+ */
+async function saveRecordingToStorage() {
+    if (!currentGameId || recording.length === 0) {
+        return;
+    }
+
+    try {
+        // Save the recording with the game ID as the key
+        //@ts-ignore
+        await chrome.storage.local.set({
+            [currentGameId]: {
+                recording: recording,
+                timestamp: Date.now()
+            }
+        });
+        console.log(`Saved recording for game ${currentGameId} with ${recording.length} data points`);
+    } catch (error) {
+        console.error('Error saving recording to storage:', error);
+    }
+}
+
+/**
+ * Updates the recording with the current population value
+ * @param valid Whether the population value is valid
+ * @param population The current population value
+ */
+function updateRecording(valid: boolean, population: number) {
+    // Get the current game ID
+    const gameId = getGameId();
+
+    if (!valid) {
+        if (gameState !== GAME_STATES.NOT_ACTIVE) {
+            // If we were recording but now we're not, save the final recording
+            if (currentGameId && recording.length > 0) {
+                saveRecordingToStorage();
+            }
+        }
+
+        gameState = GAME_STATES.NOT_ACTIVE;
+        gameStart = Date.now();
+        recording = [];
+        lastRecorded = 0;
+        lastStorageSave = 0;
+        currentGameId = null;
+        return;
+    }
+
+    // If this is a new game, initialize the recording
+    if (gameId !== currentGameId) {
+        // Save the previous recording if there was one
+        if (currentGameId && recording.length > 0) {
+            saveRecordingToStorage();
+        }
+
+        // Start a new recording
+        currentGameId = gameId;
+        gameStart = Date.now();
+        recording = [];
+        lastRecorded = 0;
+        lastStorageSave = 0;
+        gameState = GAME_STATES.RECORDING;
+    }
+
+    // Record the population value once per second
+    if (Date.now() - lastRecorded > 1000) {
+        recording.push(population); // 1 Hz recording
+        lastRecorded = Date.now();
+        console.log('recording', population)
+    }
+
+    // Save to storage every minute
+    if (Date.now() - lastStorageSave > 5000) {
+        saveRecordingToStorage();
+        lastStorageSave = Date.now();
+    }
+}

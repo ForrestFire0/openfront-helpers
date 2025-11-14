@@ -3,7 +3,7 @@
   "name": "openfront-helpers",
   "version": "1.0",
   "description": "Adds percentage calculation to Openfront game population counters",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "storage", "unlimitedStorage", "downloads"],
   "content_scripts": [
     {
       "matches": ["*://openfront.io/*"],
@@ -11,6 +11,9 @@
     }
   ],
   "action": {
-    "default_title": "openfront-helpers"
+    "default_title": "Download Population History CSV"
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }
