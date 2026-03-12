@@ -73,6 +73,7 @@ function updatePopulationDisplay() {
         }
         // Cast to HTMLElement to access properties
         const htmlElement = populationElement;
+        htmlElement.style.color = 'white';
         // Get the text content for parsing (without modifying the DOM)
         let textContent = htmlElement.textContent || '';
         // Remove any existing percentage text nodes

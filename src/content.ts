@@ -91,6 +91,7 @@ function updatePopulationDisplay(): void {
 
         // Cast to HTMLElement to access properties
         const htmlElement = populationElement as HTMLElement;
+        htmlElement.style.color = 'white';
 
         // Get the text content for parsing (without modifying the DOM)
         let textContent = htmlElement.textContent || '';
