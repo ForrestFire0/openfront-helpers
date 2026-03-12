@@ -9,12 +9,6 @@ ALL CHATGPT BELOW (lol)
 
 ## Implementation Details
 
-This extension is specifically designed for the Openfront game interface. It uses a precise DOM path to locate the population counter element:
-
-```javascript
-document.getElementsByTagName('control-panel')[0].children[1].children[0].children[0].children[1]
-```
-
 The extension also handles text formats like "12.1K / 12.1K (+3)" by ignoring the content in parentheses.
 
 ## Development
